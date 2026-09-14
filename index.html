@@ -1,1 +1,528 @@
-<h1>Mana spēle</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mana spēle</title>
+    <style>
+      :root {
+        --bg1: #0d1226;
+        --bg2: #1b2140;
+        --panel: rgba(16, 20, 36, 0.82);
+        --accent: #7cf7ff;
+        --accent-2: #b38cff;
+        --gold: #ffd76a;
+        --danger: #ff6b7b;
+        --text: #edf6ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: Arial, Helvetica, sans-serif;
+        background: radial-gradient(circle at top, #243867 0%, var(--bg1) 38%, var(--bg2) 100%);
+        color: var(--text);
+      }
+
+      .game-shell {
+        width: min(90vw, 900px);
+        background: var(--panel);
+        border: 1px solid rgba(124, 247, 255, 0.25);
+        border-radius: 22px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+        padding: 20px;
+      }
+
+      h1 {
+        margin: 0 0 14px;
+        text-align: center;
+        font-size: clamp(2rem, 4vw, 3rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        text-shadow: 0 0 14px rgba(124, 247, 255, 0.5);
+      }
+
+      .hud {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        font-weight: 700;
+        flex-wrap: wrap;
+      }
+
+      .stat {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 10px 14px;
+        min-width: 130px;
+        text-align: center;
+      }
+
+      .stat span {
+        display: block;
+        font-size: 0.75rem;
+        color: #a8c7ff;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .game-area-wrap {
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 18px;
+        border: 2px solid rgba(179, 140, 255, 0.35);
+        background: linear-gradient(180deg, rgba(12, 17, 31, 0.95), rgba(21, 29, 53, 0.95));
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: none;
+        place-items: center;
+        text-align: center;
+        background: rgba(9, 12, 22, 0.72);
+        border-radius: 18px;
+      }
+
+      .overlay.visible {
+        display: grid;
+      }
+
+      .overlay-card {
+        background: rgba(15, 20, 38, 0.9);
+        border: 1px solid rgba(124, 247, 255, 0.2);
+        border-radius: 18px;
+        padding: 24px 28px;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.4);
+      }
+
+      .overlay-card h2 {
+        margin: 0 0 12px;
+        font-size: clamp(1.6rem, 3vw, 2.5rem);
+        color: var(--gold);
+      }
+
+      .overlay-card p {
+        margin: 8px 0;
+        color: #dfe9ff;
+      }
+
+      .email-label {
+        display: block;
+        margin-top: 18px;
+        color: #bfd2ff;
+        font-size: 0.9rem;
+        text-align: left;
+      }
+
+      .email-input {
+        display: block;
+        width: min(100%, 320px);
+        margin-top: 6px;
+        padding: 11px 12px;
+        border: 1px solid rgba(124, 247, 255, 0.35);
+        border-radius: 8px;
+        background: rgba(5, 10, 24, 0.8);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .email-input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      button {
+        margin-top: 16px;
+        border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #061320;
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 12px 24px;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(124, 247, 255, 0.28);
+        transition: transform 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .controls {
+        margin-top: 14px;
+        text-align: center;
+        color: #bfd2ff;
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-shell">
+      <h1>Mana spēle</h1>
+
+      <div class="hud">
+        <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+        <div class="stat"><span>Lives</span><strong id="lives">3</strong></div>
+        <div class="stat"><span>Time</span><strong id="time">45</strong></div>
+      </div>
+
+      <div class="game-area-wrap">
+        <canvas id="gameCanvas" width="820" height="500" aria-label="Mana game area"></canvas>
+        <div id="overlay" class="overlay visible" role="dialog" aria-live="polite">
+          <div class="overlay-card">
+            <h2 id="overlayTitle">Mana Quest</h2>
+            <p id="overlayText">Collect the glowing mana and avoid the shadow orbs.</p>
+            <label class="email-label" for="emailInput">
+              Email address
+              <input class="email-input" id="emailInput" type="email" value="raimondsgarda@gmail.com" required />
+            </label>
+            <button id="startButton">Start Game</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">Move with WASD or arrow keys</div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const scoreEl = document.getElementById('score');
+      const livesEl = document.getElementById('lives');
+      const timeEl = document.getElementById('time');
+      const overlay = document.getElementById('overlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayText = document.getElementById('overlayText');
+      const emailInput = document.getElementById('emailInput');
+      const startButton = document.getElementById('startButton');
+
+      const WIDTH = canvas.width;
+      const HEIGHT = canvas.height;
+      const PLAYER_SIZE = 22;
+      const MAX_LIVES = 3;
+      const ROUND_TIME = 45;
+
+      const keys = {};
+      let animationId;
+      let lastTime = 0;
+      let score = 0;
+      let lives = MAX_LIVES;
+      let remainingTime = ROUND_TIME;
+      let gameRunning = false;
+      let playerEmail = emailInput.value;
+
+      const player = {
+        x: WIDTH / 2,
+        y: HEIGHT / 2,
+        radius: PLAYER_SIZE,
+        speed: 270,
+        color: '#79efff',
+      };
+
+      const mana = [];
+      const hazards = [];
+
+      function createMana() {
+        const radius = 8 + Math.random() * 10;
+        mana.push({
+          x: 40 + Math.random() * (WIDTH - 80),
+          y: 40 + Math.random() * (HEIGHT - 80),
+          radius,
+          pulse: Math.random() * Math.PI * 2,
+          value: 10 + Math.random() * 15,
+        });
+      }
+
+      function createHazard() {
+        const radius = 12 + Math.random() * 18;
+        const edge = Math.floor(Math.random() * 4);
+        let x = 0;
+        let y = 0;
+
+        if (edge === 0) {
+          x = Math.random() * WIDTH;
+          y = -radius;
+        } else if (edge === 1) {
+          x = WIDTH + radius;
+          y = Math.random() * HEIGHT;
+        } else if (edge === 2) {
+          x = Math.random() * WIDTH;
+          y = HEIGHT + radius;
+        } else {
+          x = -radius;
+          y = Math.random() * HEIGHT;
+        }
+
+        const dx = player.x - x;
+        const dy = player.y - y;
+        const distance = Math.hypot(dx, dy) || 1;
+
+        hazards.push({
+          x,
+          y,
+          radius,
+          speed: 55 + Math.random() * 65,
+          dx: (dx / distance) * (55 + Math.random() * 65),
+          dy: (dy / distance) * (55 + Math.random() * 65),
+          hue: Math.random() * 40,
+        });
+      }
+
+      function resetGame() {
+        score = 0;
+        lives = MAX_LIVES;
+        remainingTime = ROUND_TIME;
+        player.x = WIDTH / 2;
+        player.y = HEIGHT / 2;
+        mana.length = 0;
+        hazards.length = 0;
+
+        for (let i = 0; i < 7; i += 1) createMana();
+        for (let i = 0; i < 3; i += 1) createHazard();
+
+        updateHud();
+      }
+
+      function updateHud() {
+        scoreEl.textContent = score;
+        livesEl.textContent = lives;
+        timeEl.textContent = Math.ceil(remainingTime);
+      }
+
+      function showOverlay(title, text, buttonText) {
+        overlayTitle.textContent = title;
+        overlayText.textContent = text;
+        startButton.textContent = buttonText;
+        overlay.classList.add('visible');
+      }
+
+      function hideOverlay() {
+        overlay.classList.remove('visible');
+      }
+
+      function startGame() {
+        if (!emailInput.checkValidity()) {
+          emailInput.reportValidity();
+          return;
+        }
+
+        playerEmail = emailInput.value.trim();
+        resetGame();
+        gameRunning = true;
+        hideOverlay();
+        lastTime = 0;
+        cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(gameLoop);
+      }
+
+      function endGame(success) {
+        gameRunning = false;
+        cancelAnimationFrame(animationId);
+
+        if (success) {
+          showOverlay('Victory!', `You gathered ${score} mana points and survived the storm!`, 'Play Again');
+        } else {
+          showOverlay('Game Over', `Final score: ${score}. Try another run.`, 'Retry');
+        }
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function updatePlayer(dt) {
+        let moveX = 0;
+        let moveY = 0;
+
+        if (keys['ArrowLeft'] || keys['a']) moveX -= 1;
+        if (keys['ArrowRight'] || keys['d']) moveX += 1;
+        if (keys['ArrowUp'] || keys['w']) moveY -= 1;
+        if (keys['ArrowDown'] || keys['s']) moveY += 1;
+
+        if (moveX !== 0 || moveY !== 0) {
+          const length = Math.hypot(moveX, moveY) || 1;
+          moveX /= length;
+          moveY /= length;
+
+          player.x += moveX * player.speed * dt;
+          player.y += moveY * player.speed * dt;
+        }
+
+        player.x = clamp(player.x, player.radius, WIDTH - player.radius);
+        player.y = clamp(player.y, player.radius, HEIGHT - player.radius);
+      }
+
+      function updateMana(dt) {
+        for (let i = mana.length - 1; i >= 0; i -= 1) {
+          const orb = mana[i];
+          orb.pulse += dt * 2.5;
+
+          const dx = player.x - orb.x;
+          const dy = player.y - orb.y;
+          const distance = Math.hypot(dx, dy);
+
+          if (distance < player.radius + orb.radius + 4) {
+            score += Math.round(orb.value);
+            mana.splice(i, 1);
+            createMana();
+            updateHud();
+          }
+        }
+      }
+
+      function updateHazards(dt) {
+        for (let i = hazards.length - 1; i >= 0; i -= 1) {
+          const danger = hazards[i];
+          const dx = player.x - danger.x;
+          const dy = player.y - danger.y;
+          const distance = Math.hypot(dx, dy) || 1;
+
+          danger.x += (dx / distance) * danger.speed * dt;
+          danger.y += (dy / distance) * danger.speed * dt;
+
+          if (distance < player.radius + danger.radius) {
+            lives -= 1;
+            hazards.splice(i, 1);
+            createHazard();
+
+            if (lives <= 0) {
+              endGame(false);
+              return;
+            }
+            updateHud();
+          }
+        }
+
+        if (Math.random() < 0.013) {
+          createHazard();
+        }
+      }
+
+      function updateTimer(dt) {
+        remainingTime -= dt;
+        if (remainingTime <= 0) {
+          remainingTime = 0;
+          updateHud();
+          endGame(true);
+          return;
+        }
+        updateHud();
+      }
+
+      function drawBackground() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        gradient.addColorStop(0, '#0b1022');
+        gradient.addColorStop(1, '#142246');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        for (let i = 0; i < 40; i += 1) {
+          const x = (i * 97) % WIDTH;
+          const y = (i * 53) % HEIGHT;
+          ctx.fillStyle = 'rgba(124, 247, 255, 0.08)';
+          ctx.fillRect(x + 8, y + 8, 2, 2);
+        }
+      }
+
+      function drawPlayer() {
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#7cf7ff';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#7cf7ff';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#dffcff';
+        ctx.fill();
+      }
+
+      function drawMana() {
+        mana.forEach((orb) => {
+          const radius = orb.radius + Math.sin(orb.pulse) * 2;
+          ctx.beginPath();
+          ctx.arc(orb.x, orb.y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffd76a';
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = '#ffd76a';
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          ctx.beginPath();
+          ctx.arc(orb.x - 2, orb.y - 2, radius * 0.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.fill();
+        });
+      }
+
+      function drawHazards() {
+        hazards.forEach((danger) => {
+          ctx.beginPath();
+          ctx.arc(danger.x, danger.y, danger.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `hsl(${danger.hue}, 65%, 60%)`;
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = 'rgba(255, 107, 123, 0.6)';
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+      }
+
+      function draw() {
+        drawBackground();
+        drawMana();
+        drawHazards();
+        drawPlayer();
+      }
+
+      function gameLoop(timestamp) {
+        if (!gameRunning) return;
+
+        if (!lastTime) lastTime = timestamp;
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.035);
+        lastTime = timestamp;
+
+        updatePlayer(dt);
+        updateMana(dt);
+        updateHazards(dt);
+        updateTimer(dt);
+        draw();
+
+        if (gameRunning) {
+          animationId = requestAnimationFrame(gameLoop);
+        }
+      }
+
+      function onKeyChange(event) {
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        keys[key] = event.type === 'keydown';
+      }
+
+      window.addEventListener('keydown', onKeyChange);
+      window.addEventListener('keyup', onKeyChange);
+      startButton.addEventListener('click', startGame);
+
+      resetGame();
+      showOverlay('Mana Quest', 'Collect the glowing mana and avoid the shadow orbs.', 'Start Game');
+      draw();
+    </script>
+  </body>
+</html>
